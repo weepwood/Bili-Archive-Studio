@@ -31,12 +31,12 @@ test('SQLite 初始化、重复索引去重、全文搜索与重启保留',t=>{
 test('本地任务状态、失败重试、取消及重启恢复',async t=>{
   const f=fixture();t.after(()=>f.close());
   const manager=new LocalTasks(f.db,{reindex:async()=>{await sleep(10);},listMedia:async()=>['a','b','c'],cacheOne:async()=>sleep(20)});
-  const first=manager.start('reindex');assert.equal(first.state,'queued');await sleep(70);
+  const first=manager.start('reindex');assert.equal(first.state,'queued');await manager.waitForIdle();
   assert.equal(f.db.getTask(first.id).state,'completed');
-  const second=manager.start('cache');await sleep(5);manager.cancel(second.id);await sleep(100);
+  const second=manager.start('cache');await sleep(5);manager.cancel(second.id);await manager.waitForIdle();
   assert.equal(f.db.getTask(second.id).state,'cancelled');
   assert.ok(manager.retry(second.id).id!==second.id);
-  await sleep(100);
+  await manager.waitForIdle();
   const interrupted=f.db.createTask('reindex');f.db.updateTask(interrupted.id,{state:'running'});
   new LocalTasks(f.db,{reindex:async()=>{},listMedia:async()=>[],cacheOne:async()=>{}});
   assert.equal(f.db.getTask(interrupted.id).state,'interrupted');

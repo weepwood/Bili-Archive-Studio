@@ -11,7 +11,8 @@ class LocalTasks {
     const task=this.db.createTask(kind);
     const control={id:task.id,cancel:false};this.active=control;
     // Defer execution so the API can respond with its task ID.
-    setImmediate(()=>this.execute(task,control));
+    this.runPromise=new Promise(resolve=>setImmediate(resolve)).then(()=>this.execute(task,control));
+    this.runPromise.catch(e=>{ console.error('本地任务执行异常：',e); });
     return task;
   }
   cancel(id){
@@ -25,6 +26,7 @@ class LocalTasks {
     if(!['interrupted','failed','cancelled'].includes(previous.state))throw Object.assign(new Error('此任务不能重试'),{statusCode:409});
     return this.start(previous.kind);
   }
+  async waitForIdle(){if(this.runPromise)await this.runPromise;}
   async execute(task,control){
     const id=task.id;
     this.db.updateTask(id,{state:'running',message:'任务已启动'});
