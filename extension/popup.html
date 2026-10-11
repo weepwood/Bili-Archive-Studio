@@ -1,0 +1,7 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bili Archive Studio</title><link rel="stylesheet" href="popup.css"></head>
+<body><main><header><strong>Bili Archive Studio</strong><span>账号连接与采集助手</span></header>
+<section><h2>① 登录哔哩哔哩</h2><p>先在浏览器登录 B 站，账号密码和 Cookie 不会发送给本地客户端。</p><button id="login" class="soft">打开 B 站登录页</button></section>
+<section><h2>② 连接到本地客户端</h2><p>在客户端「账号连接」生成 8 位连接码，并输入下方。</p><label for="pair">连接码</label><input id="pair" type="text" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="00000000"><button id="link" class="primary">关联当前 B 站账号</button></section>
+<section><h2>③ 采集动态</h2><p>关联成功后，在登录的 B 站网页打开采集面板，保存数据到本地目录。</p><button id="collect" class="soft">打开动态采集面板</button></section>
+<p id="result" role="status" aria-live="polite"></p><footer>仅传送账号 UID、昵称及头像地址，不传送登录凭证。</footer>
+</main><script src="popup.js"></script></body></html>

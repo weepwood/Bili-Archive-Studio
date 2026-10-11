@@ -1,6 +1,6 @@
 {
   "name":"bilibili-archive-studio",
-  "version":"0.3.0",
+  "version":"0.4.1",
   "private":true,
   "description":"本地哔哩哔哩动态归档、图文媒体缓存与网页阅读器",
   "scripts":{"start":"node server.js","test":"node --test tests/*.test.js"},

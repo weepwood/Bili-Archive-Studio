@@ -1,1 +1,22 @@
-{"manifest_version":3,"name":"Bili Archive Studio 采集助手","version":"0.2.0","description":"在已登录的哔哩哔哩页面一键打开归档面板，无需 F12。数据只保存至用户选择的本地目录。","permissions":["activeTab","scripting"],"host_permissions":["https://*.bilibili.com/*"],"action":{"default_title":"打开动态归档采集器"},"background":{"service_worker":"background.js"}}
+{
+  "manifest_version": 3,
+  "name": "Bili Archive Studio 采集助手",
+  "version": "0.4.1",
+  "description": "登录 B 站后，在本地客户端关联账号并启动动态采集；不会上传 Cookie。",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.bilibili.com/*",
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_title": "Bili Archive Studio 账号关联与采集",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

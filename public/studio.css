@@ -11,3 +11,17 @@
 .studio-progress-bar{height:100%;background:#00aeec;border-radius:6px;transition:width .25s}
 .studio-task-actions{display:flex;gap:10px;margin-top:11px}.studio-task-actions button{padding:7px 11px}
 @media(max-width:560px){.studio-task-head{align-items:flex-start;flex-direction:column}}
+
+/* 账号连接 / 本地阅读器模式切换 */
+#accountLink{color:#007cb3;background:#e9f8fe;max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#leaveReader{border:1px solid #e4e7ea;background:#fff}
+#leaveReader:hover,#accountLink:hover{background:#dcf4fe}
+.studio-account{background:#fff;border:1px solid #e9edf1;border-radius:13px;padding:25px;margin-bottom:18px;display:grid;gap:8px}
+.studio-account-title{font-size:19px}
+.studio-account-badge{width:max-content;font-size:11px;color:#a36924;background:#fff4df;padding:4px 10px;border-radius:30px}
+.studio-account-badge.linked{color:#158459;background:#e8f9f1}
+.studio-code-card{border:1px solid #abe5fc;background:#f2fbff;border-radius:13px;margin-bottom:18px;padding:25px;display:flex;flex-direction:column;gap:8px}
+.studio-code-card span{font-size:12px;color:#61666d}
+.studio-pair-code{font-size:38px;letter-spacing:7px;color:#008dc5;font-variant-numeric:tabular-nums;user-select:all}
+@media(max-width:1160px){.top-nav{display:none!important}.top-inner{gap:10px}.top-actions{gap:5px}}
+@media(max-width:720px){#accountLink{font-size:11px;padding:8px}#openStudio{font-size:11px;padding:8px}.top-actions .saved-dot,.top-actions span:not(.saved-dot){display:none}}

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Bili Archive Studio",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "identifier": "com.weepwood.biliarchivestudio",
   "build": {
     "frontendDist": "../public"
@@ -23,7 +23,8 @@
       "../archive-db.js": "app/archive-db.js",
       "../local-tasks.js": "app/local-tasks.js",
       "../normalize.js": "app/normalize.js",
-      "../public/": "app/public/"
+      "../public/": "app/public/",
+      "../account-bridge.js": "app/account-bridge.js"
     },
     "windows": {
       "nsis": {
