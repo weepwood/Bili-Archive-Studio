@@ -1,3 +1,19 @@
+# 第二阶段（v0.3）— SQLite 索引与本地任务中心
+
+> 此版本面向 **Node.js 24.15+**。使用内置 `node:sqlite`（截至 Node 24 为 release-candidate 状态），无需单独安装 SQLite 或 npm 原生扩展。建议 Node 24 LTS。
+
+- 启动时自动导入原有 `owner.json`、`feed.json`、`up/*.json` 和 `detail/*.json`，在 `archive-data/archive.sqlite` 创建 SQLite 索引；原 JSON **不修改**。下一次扫描只更新发生变化的动态，不重复插入。
+- 工作台「采集中心」新增 **本地任务**：JSON 重新索引、未缓存媒体下载、进度、停止、失败重试、历史记录。**仅管理本地任务；B 站账号数据抓取依然由浏览器扩展执行**。
+- 阅读器 `/api/posts` 使用 SQLite 筛选和全文检索（FTS5 trigram；1–2 字搜索降级 LIKE）。任务状态在 SQLite 持久保存，重启时将未完成任务标记为“中断”，可再次执行。
+- 新增 Linux/Windows CI 测试和 Windows 源码便携 ZIP（需本机 Node 24；尚不是可独立运行的 exe/安装包）。
+- 本地服务仅监听 `127.0.0.1`，任务写入 API 拒绝跨站 Origin 和未带请求头的请求。
+
+**升级前备份** `archive-data/`，尤其首次迁移建议保留完整原始 JSON。不要将该目录、SQLite 数据库或 Cookies 提交到公开 GitHub。
+
+当前尚未实现：桌面窗口内直接驱动 B 站账号采集、Tauri 独立客户端、100% 历史完整性证明、全站所有富文本像素级复刻。
+
+---
+
 ## 新版交互工作台（0.2 首阶段）
 
 在原有三栏阅读页面点击顶栏 **「管理工作台」**，即可进入首页概览、动态阅读、采集中心、关注管理、媒体管理、设置与帮助。此阶段保留原来的服务与 JSON 归档格式。
@@ -26,7 +42,7 @@
 
 ## 立刻开始（Windows Chrome / Edge）
 
-1. 解压项目文件夹，安装 Node.js 20 或更新版本（如果已安装就不用装）。
+1. 解压项目文件夹，安装 Node.js 24.15 或更新版本（如果已安装就不用装）。
 2. 双击 `start-windows.cmd`，浏览器打开 `http://127.0.0.1:8765`。程序会创建项目目录下的 `archive-data` 文件夹。
 3. 在浏览器另开一页 `https://www.bilibili.com/` 并登录自己的账号。按 F12 → Console，检查后粘贴 `collector/bili_collector.js` 的全部内容并执行。
 4. 在采集面板点击「选择保存目录」，**选择本项目中的 `archive-data` 文件夹**，执行「抓取关注流」及「逐人深度归档」。接着点击「补全图文长正文」，按需运行多轮。
@@ -64,7 +80,7 @@ archive-data/
 - 采集器必须在**已登录的 B 站页面**运行，使用网页自身已登录的 `fetch(..., {credentials:'include'})` 读取 B 站 API。
 - `/x/web-interface/nav` 查询账号；`/x/relation/followings` 分页获取关注；`/x/polymer/web-dynamic/v1/feed/all` 获取关注流；`/x/polymer/web-dynamic/v1/feed/space` 获取 UP 空间动态。
 - 对检测到的 Opus 使用 `/x/polymer/web-dynamic/v1/opus/detail` 补齐长正文。由于接口不断变化，可能失败或仍有特殊形式无法解析。原始返回体仍保留。
-- 阅读器服务仅绑定本机 `127.0.0.1`，不持有也不读取浏览器 Cookie。只缓存公共 CDN 图片，不下载视频流；数据库无需安装，数据在可读的 JSON 文件中。
+- 阅读器服务仅绑定本机 `127.0.0.1`，不持有也不读取浏览器 Cookie。只缓存公共 CDN 图片，不下载视频流；SQLite 无需额外安装，原始数据仍保存在可读的 JSON 文件中。
 - 媒体下载只允许 B 站图片 CDN 域名，拒绝任意第三方 URL，最大 40 MiB/文件，同时最多 2 个下载任务。
 
 ## 目前实现 / 尚未实现
