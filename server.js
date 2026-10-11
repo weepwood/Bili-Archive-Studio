@@ -8,6 +8,7 @@ const crypto = require('node:crypto');
 const { normalize, cleanUrl } = require('./normalize');
 const { ArchiveDB } = require('./archive-db');
 const { LocalTasks } = require('./local-tasks');
+const { AccountBridge } = require('./account-bridge');
 const DEFAULT_PORT = 8765;
 const opts = process.argv.slice(2);
 function flag(name, fallback) { const i = opts.indexOf(`--${name}`); return i > -1 ? opts[i+1] || fallback : fallback; }
@@ -21,7 +22,7 @@ let mediaIndex = {}, activeDownloads = 0, lastMediaError = '', mediaErrors = 0;
 let indexWrites = Promise.resolve();
 let queue = [], queued = new Set(), waiting = new Map(), caching = false, completed = 0;
 let scanInProgress = null;
-let archiveDb=null, localTasks=null, lastSync=null;
+let archiveDb=null, localTasks=null, lastSync=null, accountBridge=null;
 function json(res, value, code=200){const body=JSON.stringify(value);res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(body);}
 async function loadJson(p){ try{return JSON.parse(await fsp.readFile(p,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;} }
 async function filesIn(p) {try{return (await fsp.readdir(p)).filter(v=>v.endsWith('.json'));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
@@ -135,16 +136,27 @@ function pump(){
   }
 }
 function typeCounter(){const ret={all:posts.length,text:0,image:0,video:0,forward:0,article:0,live:0};for(const p of posts)ret[p.type]=(ret[p.type]||0)+1;return ret;}
-function status(){return {account,posts:posts.length,authors:users.length,types:typeCounter(),health,media:{cached:Object.keys(mediaIndex).length,queued:queue.length,active:activeDownloads,failed:mediaErrors,lastError:lastMediaError,caching,completed}, database:{enabled:!!archiveDb, sync:lastSync, filename:"archive.sqlite"},taskActive:localTasks?.active?.id||null, data:DATA};}
+function status(){return {account:account?.uid?account:(accountBridge?.linked||{}),linkedAccount:accountBridge?.linked||null,accountMismatch:!!(account?.uid && accountBridge?.linked?.uid && String(account.uid)!==String(accountBridge.linked.uid)),posts:posts.length,authors:users.length,types:typeCounter(),health,media:{cached:Object.keys(mediaIndex).length,queued:queue.length,active:activeDownloads,failed:mediaErrors,lastError:lastMediaError,caching,completed}, database:{enabled:!!archiveDb, sync:lastSync, filename:"archive.sqlite"},taskActive:localTasks?.active?.id||null, data:DATA};}
 const mimeType={'.html':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.ico':'image/x-icon','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.gif':'image/gif','.webp':'image/webp','.avif':'image/avif'};
 function serveFile(res,file, cache=false){let stream=fs.createReadStream(file);stream.on('error',()=>{if(!res.headersSent)json(res,{error:'not found'},404);else res.destroy();});const type=mimeType[path.extname(file)]||'application/octet-stream';res.writeHead(200,{'Content-Type':type,'X-Content-Type-Options':'nosniff','Cache-Control':cache?'public,max-age=86400':'no-cache'});stream.pipe(res);}
 async function handler(req,res){
   const host=req.headers.host;
   if(host!==`127.0.0.1:${PORT}` && host!==`localhost:${PORT}`)return json(res,{error:'invalid host'},403);
   const uri = new URL(req.url,`http://localhost:${PORT}`);
+  if(req.method==='POST' && uri.pathname==='/api/account/link'){
+    // Only the browser extension can submit a one-time pairing code. No account cookies are stored.
+    const origin=req.headers.origin||'';
+    if(origin && !/^chrome-extension:\/\/[a-z0-9-]+$/i.test(origin) && !/^moz-extension:\/\/[a-z0-9-]+$/i.test(origin))return json(res,{error:'extension origin required'},403);
+    if(!/^\d{8}$/.test(String(req.headers['x-bili-archive-pair']||'')))return json(res,{error:'invalid pairing code'},403);
+    let body='';for await (const chunk of req){body+=chunk;if(body.length>3000)return json(res,{error:'request too large'},413);}
+    let payload;try{payload=JSON.parse(body)}catch{return json(res,{error:'invalid JSON'},400)}
+    try{return json(res,await accountBridge.connect(req.headers['x-bili-archive-pair'],payload))}catch(e){return json(res,{error:e.message},e.statusCode||500)}
+  }
   if(req.method==='POST') {
     const origin=req.headers.origin;
     if(req.headers['x-bili-archive']!=='1' || (origin && origin!==`http://127.0.0.1:${PORT}`&&origin!==`http://localhost:${PORT}`))return json(res,{error:'forbidden'},403);
+    if(uri.pathname==='/api/account/pair/start')return json(res,accountBridge.start());
+    if(uri.pathname==='/api/account/disconnect')return json(res,await accountBridge.disconnect());
     if(uri.pathname==='/api/reindex'){const done=await scan();return json(res,done);}
     if(uri.pathname==='/api/tasks/start'){try{return json(res,localTasks.start(uri.searchParams.get('kind')||''),202)}catch(e){return json(res,{error:e.message},e.statusCode||500)}}
     if(uri.pathname==='/api/tasks/cancel'){try{return json(res,localTasks.cancel(uri.searchParams.get('id')||''))}catch(e){return json(res,{error:e.message},e.statusCode||500)}}
@@ -193,6 +205,7 @@ async function handler(req,res){
 async function main(){
   if(!Number.isInteger(PORT)||PORT<1||PORT>65535)throw Error('非法端口');
   await fsp.mkdir(MEDIA,{recursive:true});mediaIndex=(await loadJson(MEDIA_INDEX))||{};
+  accountBridge=new AccountBridge(DATA);
   archiveDb=new ArchiveDB(DATA);
   const summary=await scan();
   localTasks=new LocalTasks(archiveDb,{
