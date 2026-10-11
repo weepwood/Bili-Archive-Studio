@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Bili Archive Studio",
+  "version": "0.4.0",
+  "identifier": "com.weepwood.biliarchivestudio",
+  "build": {
+    "frontendDist": "../public"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "resources": {
+      "../runtime/node.exe": "runtime/node.exe",
+      "../server.js": "app/server.js",
+      "../archive-db.js": "app/archive-db.js",
+      "../local-tasks.js": "app/local-tasks.js",
+      "../normalize.js": "app/normalize.js",
+      "../public/": "app/public/"
+    },
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

@@ -6,3 +6,9 @@ node_modules/
 
 /demo-data/*.sqlite*
 /dist/
+ 
+runtime/ 
+src-tauri/target/ 
+src-tauri/gen/ 
+src-tauri/icons/ 
+icon.png
