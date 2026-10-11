@@ -1,0 +1,46 @@
+name: 测试与 Windows 便携包
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 检查语法
+        run: |
+          node --check server.js
+          node --check archive-db.js
+          node --check local-tasks.js
+          node --check public/studio.js
+      - name: 执行单元测试
+        run: npm test
+      - name: 验证演示数据可索引
+        run: node tests/smoke.js
+  windows-portable:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 构建 Windows 源码便携包（需要本机 Node.js 24）
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $files = @('README.md','.gitignore','package.json','server.js','archive-db.js','local-tasks.js','normalize.js','public','collector','extension','demo-data','start-windows.cmd','start-demo-windows.cmd')
+          Compress-Archive -Path $files -DestinationPath 'dist/Bili-Archive-Studio-Windows-source.zip' -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bili-Archive-Studio-Windows-source
+          path: dist/*.zip

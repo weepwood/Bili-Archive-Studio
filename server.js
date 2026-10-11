@@ -6,6 +6,8 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { normalize, cleanUrl } = require('./normalize');
+const { ArchiveDB } = require('./archive-db');
+const { LocalTasks } = require('./local-tasks');
 const DEFAULT_PORT = 8765;
 const opts = process.argv.slice(2);
 function flag(name, fallback) { const i = opts.indexOf(`--${name}`); return i > -1 ? opts[i+1] || fallback : fallback; }
@@ -19,6 +21,7 @@ let mediaIndex = {}, activeDownloads = 0, lastMediaError = '', mediaErrors = 0;
 let indexWrites = Promise.resolve();
 let queue = [], queued = new Set(), waiting = new Map(), caching = false, completed = 0;
 let scanInProgress = null;
+let archiveDb=null, localTasks=null, lastSync=null;
 function json(res, value, code=200){const body=JSON.stringify(value);res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(body);}
 async function loadJson(p){ try{return JSON.parse(await fsp.readFile(p,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;} }
 async function filesIn(p) {try{return (await fsp.readdir(p)).filter(v=>v.endsWith('.json'));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
@@ -73,6 +76,7 @@ async function scan(){
     for(const p of posts)if(p.uid&&!uMap.has(p.uid))uMap.set(p.uid,{uid:p.uid,name:p.author,avatar:p.avatar,count:counts.get(p.uid)||0});
     users=[...uMap.values()].sort((a,b)=>b.count-a.count);
     sourceCount=all.size;
+    if(archiveDb)lastSync=archiveDb.sync(normalized,users);
     health={followingsExpected:follows?.expected??null,followingsCollected:following.length,followingsComplete:!!follows?.complete,feedComplete:!!feed?.complete,
       spaces:upStatus.length,incomplete:upStatus.filter(x=>!x.complete),failed:report?.failed||[],missingDetail:posts.filter(p=>p.hasOpus&&!p.detailReady).length};
     return {count:posts.length,users:users.length};
@@ -131,15 +135,20 @@ function pump(){
   }
 }
 function typeCounter(){const ret={all:posts.length,text:0,image:0,video:0,forward:0,article:0,live:0};for(const p of posts)ret[p.type]=(ret[p.type]||0)+1;return ret;}
-function status(){return {account,posts:posts.length,authors:users.length,types:typeCounter(),health,media:{cached:Object.keys(mediaIndex).length,queued:queue.length,active:activeDownloads,failed:mediaErrors,lastError:lastMediaError,caching,completed}, data:DATA};}
+function status(){return {account,posts:posts.length,authors:users.length,types:typeCounter(),health,media:{cached:Object.keys(mediaIndex).length,queued:queue.length,active:activeDownloads,failed:mediaErrors,lastError:lastMediaError,caching,completed}, database:{enabled:!!archiveDb, sync:lastSync, filename:"archive.sqlite"},taskActive:localTasks?.active?.id||null, data:DATA};}
 const mimeType={'.html':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.ico':'image/x-icon','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.gif':'image/gif','.webp':'image/webp','.avif':'image/avif'};
 function serveFile(res,file, cache=false){let stream=fs.createReadStream(file);stream.on('error',()=>{if(!res.headersSent)json(res,{error:'not found'},404);else res.destroy();});const type=mimeType[path.extname(file)]||'application/octet-stream';res.writeHead(200,{'Content-Type':type,'X-Content-Type-Options':'nosniff','Cache-Control':cache?'public,max-age=86400':'no-cache'});stream.pipe(res);}
 async function handler(req,res){
+  const host=req.headers.host;
+  if(host!==`127.0.0.1:${PORT}` && host!==`localhost:${PORT}`)return json(res,{error:'invalid host'},403);
   const uri = new URL(req.url,`http://localhost:${PORT}`);
   if(req.method==='POST') {
     const origin=req.headers.origin;
     if(req.headers['x-bili-archive']!=='1' || (origin && origin!==`http://127.0.0.1:${PORT}`&&origin!==`http://localhost:${PORT}`))return json(res,{error:'forbidden'},403);
     if(uri.pathname==='/api/reindex'){const done=await scan();return json(res,done);}
+    if(uri.pathname==='/api/tasks/start'){try{return json(res,localTasks.start(uri.searchParams.get('kind')||''),202)}catch(e){return json(res,{error:e.message},e.statusCode||500)}}
+    if(uri.pathname==='/api/tasks/cancel'){try{return json(res,localTasks.cancel(uri.searchParams.get('id')||''))}catch(e){return json(res,{error:e.message},e.statusCode||500)}}
+    if(uri.pathname==='/api/tasks/retry'){try{return json(res,localTasks.retry(uri.searchParams.get('id')||''),202)}catch(e){return json(res,{error:e.message},e.statusCode||500)}}
     if(uri.pathname==='/api/cache'){
       let size=0;const all=new Set();for(const p of posts)for(const u of p.mediaUrls)if(allowedMedia(u))all.add(u);
       for(const u of users)if(allowedMedia(u.avatar))all.add(cleanUrl(u.avatar));
@@ -161,10 +170,12 @@ async function handler(req,res){
   }
   if(req.method!=='GET')return json(res,{error:'method not allowed'},405);
   if(uri.pathname==='/api/status')return json(res,status());
+  if(uri.pathname==='/api/tasks')return json(res,{items:archiveDb.tasks()});
   if(uri.pathname==='/api/users')return json(res,{items:users});
   if(uri.pathname==='/api/posts'){
     const q=(uri.searchParams.get('q')||'').toLocaleLowerCase();const uid=uri.searchParams.get('uid')||'';const type=uri.searchParams.get('type')||'all';
     const page=Math.max(1,Math.min(1e6,Number(uri.searchParams.get('page')||1)||1));const size=Math.max(1,Math.min(40,Number(uri.searchParams.get('size')||12)||12));
+    if(archiveDb)return json(res,archiveDb.search({q,uid,type,sort:uri.searchParams.get('sort')||'newest',page,size}));
     let filtered=posts.filter(p=>(!uid||p.uid===uid)&& (type==='all'||p.type===type) &&(!q||(`${p.author} ${p.title} ${p.text} ${p.forward?.text||''}`).toLocaleLowerCase().includes(q)));
     if(uri.searchParams.get('sort')==='oldest')filtered=filtered.slice().reverse();
     return json(res,{total:filtered.length,page,size,items:filtered.slice((page-1)*size,page*size)});
@@ -182,7 +193,17 @@ async function handler(req,res){
 async function main(){
   if(!Number.isInteger(PORT)||PORT<1||PORT>65535)throw Error('非法端口');
   await fsp.mkdir(MEDIA,{recursive:true});mediaIndex=(await loadJson(MEDIA_INDEX))||{};
+  archiveDb=new ArchiveDB(DATA);
   const summary=await scan();
+  localTasks=new LocalTasks(archiveDb,{
+    reindex:scan,
+    listMedia:async()=>{
+      const list=new Set();for(const p of posts)for(const u of p.mediaUrls||[])if(allowedMedia(u))list.add(cleanUrl(u));
+      for(const u of users)if(allowedMedia(u.avatar))list.add(cleanUrl(u.avatar));
+      return [...list].filter(u=>!(mediaIndex[hash(u)]&&fs.existsSync(path.join(MEDIA,mediaIndex[hash(u)]))));
+    },
+    cacheOne:queueMedia
+  });
   const server=http.createServer((req,res)=>handler(req,res).catch(e=>{console.error(e);if(!res.headersSent)json(res,{error:e.message||'internal error'},500);else res.destroy();}));
   server.listen(PORT,'127.0.0.1',()=>{console.log('Bili Archive Studio · http://127.0.0.1:'+PORT);console.log('归档目录：'+DATA);console.log('已索引动态：'+summary.count+' 条，UP 主：'+summary.users+' 人');});
 }

@@ -3,3 +3,6 @@
 /demo-data/media-index.json
 .DS_Store
 node_modules/
+
+/demo-data/*.sqlite*
+/dist/
