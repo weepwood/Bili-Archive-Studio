@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>动态归档 · Bili Archive Studio</title><link rel="stylesheet" href="/app.css"></head>
+<body>
+<header class="topbar"><div class="top-inner"><div class="top-logo"><span class="bililogo">bili<span>bili</span></span><span class="brand-divider"></span><span class="brand-small">动态归档</span></div><nav class="top-nav"><a href="https://www.bilibili.com" target="_blank" rel="noreferrer">首页</a><a href="https://t.bilibili.com" target="_blank" rel="noreferrer" class="selected">动态</a><a href="https://www.bilibili.com/v/popular/all" target="_blank" rel="noreferrer">热门</a><span>本地离线阅读</span></nav><div class="top-actions"><span class="saved-dot"></span><span>本地资料库</span><button id="refresh" class="action-soft">↻ 重新索引</button></div></div></header>
+<main class="layout">
+<aside class="sidebar left">
+ <section class="left-card user-info"><div class="user-cover"></div><div class="user-profile"><div class="my-avatar">B</div><h2 id="accountName">未导入账号</h2><p id="accountUid">本地归档中心</p></div><div class="user-count"><div><strong id="statUsersLeft">0</strong><span>UP 主</span></div><div><strong id="statPostsLeft">0</strong><span>动态</span></div></div></section>
+ <section class="left-card nav-card"><h3>动态浏览</h3><button class="side-link active" data-filter="all"><span class="glyph">◈</span><span>全部动态</span><span id="allBadge" class="side-number">0</span></button><button class="side-link" data-filter="video"><span class="glyph">▣</span>视频投稿</button><button class="side-link" data-filter="image"><span class="glyph">▦</span>图文动态</button><button class="side-link" data-filter="text"><span class="glyph">☷</span>文字动态</button><button class="side-link" data-filter="forward"><span class="glyph">↗</span>转发动态</button><div class="side-separator"></div><button class="side-link" id="allUsersBtn"><span class="glyph">♧</span>关注的 UP 主</button><button class="side-link" id="healthBtn"><span class="glyph">▤</span>归档完整性</button></section>
+ <section class="left-card tips"><div class="tips-icon">✦</div><strong>你的动态时光机</strong><p>图片与封面可缓存到本地。原始 JSON 完整保留，随时重新建立索引。</p></section>
+</aside>
+<section class="center">
+ <section class="follow-bar surface"><div class="follow-heading"><b>特别关注与已归档 UP 主</b><button id="showUsers">查看全部 <span>›</span></button></div><div id="avatarScroller" class="avatar-scroller"><div class="ghost-avatars">选择归档目录并开始采集后，将在这里展示关注的 UP 主。</div></div></section>
+ <section class="timeline surface"><div class="timeline-heading"><div><h1>动态</h1><div class="subtitle" id="filterSubtitle">探索已保存的点滴与精彩</div></div><div class="sort-controls"><button id="newest" class="sort-active">最新发布</button><button id="oldest">最早发布</button></div></div><div class="timeline-tabs" id="tabs"><button class="active" data-tab="all">全部动态</button><button data-tab="video">视频投稿</button><button data-tab="image">图文</button><button data-tab="text">文字</button><button data-tab="forward">转发</button></div><div class="search-bar"><span class="search-icon">⌕</span><input id="search" type="search" placeholder="搜索动态内容、视频标题或 UP 主…" autocomplete="off"><span id="searchCount">全文搜索</span></div></section>
+ <div id="feed" class="feed"></div><div class="load-wrap"><button id="loadMore" hidden>查看更多动态 ↓</button></div>
+</section>
+<aside class="sidebar right">
+ <section class="right-card storage-panel"><div class="right-head"><h3>本地档案馆</h3><span class="status-pill">● 本地运行</span></div><div class="summary-grid"><div><small>已归档动态</small><strong id="statPosts">0</strong></div><div><small>图片已缓存</small><strong id="statMedia">0</strong></div><div><small>关注 UP 主</small><strong id="statUsers">0</strong></div><div><small>图文 / 视频</small><strong id="statRich">0</strong></div></div><button id="cacheAll" class="primary-button">↓ 缓存全部图片与封面</button><button id="stopCache" class="text-button" hidden>停止继续加入队列</button><div id="cacheInfo" class="status-info">图片访问时自动缓存；点击上方按钮可批量保存。</div></section>
+ <section class="right-card"><div class="right-head"><h3>关注的 UP 主</h3><button class="plain-action" id="usersMore">全部 ›</button></div><div id="topUsers" class="top-users"></div></section>
+ <section class="right-card completeness"><div class="right-head"><h3>采集状态</h3><button class="plain-action" id="healthMore">详情 ›</button></div><div id="healthBrief" class="health-brief">等待读取目录…</div></section>
+ <footer class="right-footer">Bili Archive Studio · 个人离线阅读器<br>非哔哩哔哩官方产品 · 所有内容归原作者所有</footer>
+</aside>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div class="overlay" id="modal" hidden><div class="dialog"><div class="dialog-header"><h2 id="modalTitle">详情</h2><button class="close" id="modalClose" aria-label="关闭">×</button></div><div id="modalBody" class="dialog-body"></div></div></div>
+<div class="lightbox" id="lightbox" hidden><button id="lightClose" class="light-close" aria-label="关闭">×</button><button id="lightPrev" class="light-arrow prev">❮</button><img id="lightImage" alt="图片大图"><button id="lightNext" class="light-arrow next">❯</button><div id="lightPosition" class="light-position"></div></div>
+<script src="/app.js" defer></script></body></html>

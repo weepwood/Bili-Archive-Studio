@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict');
+const { normalize, opusParagraphs, cleanUrl }=require('../normalize');
+const { allowedMedia }=require('../server');
+const author={module_author:{name:'测试 UP 主',mid:123,face:'http://i0.hdslb.com/abc.png',pub_ts:1730000000},module_stat:{like:{count:7},comment:{count:2},forward:{count:1}}};
+const post={id_str:'1234567890',type:'DYNAMIC_TYPE_DRAW',modules:{...author,module_dynamic:{major:{type:'MAJOR_TYPE_OPUS',opus:{summary:{text:'短摘要'},pics:[{url:'https://i0.hdslb.com/test1.png'}]}}}}};
+const detail={item:{modules:[{module_type:'MODULE_TYPE_CONTENT',module_content:{paragraphs:[{para_type:1,text:{nodes:[{word:{words:'完整' }},{rich:{text:'正文'}}]}},{para_type:2,pic:{pics:[{url:'https://i0.hdslb.com/test2.png'}]}}]}}]}};
+let p=normalize(post,detail);assert.equal(p.text,'完整正文');assert.equal(p.type,'image');assert.equal(p.images.length,2);assert.equal(p.detailReady,true);assert.equal(p.avatar,'https://i0.hdslb.com/abc.png');
+assert.equal(opusParagraphs(detail).images.length,1);
+const video=normalize({id_str:'9',type:'DYNAMIC_TYPE_AV',modules:{...author,module_dynamic:{major:{type:'MAJOR_TYPE_ARCHIVE',archive:{title:'标题',bvid:'BV123',cover:'https://i1.hdslb.com/cover.jpg'}}}}});
+assert.equal(video.type,'video');assert.equal(video.videoUrl,'https://www.bilibili.com/video/BV123');assert.equal(video.cover,'https://i1.hdslb.com/cover.jpg');
+const forward=normalize({...post,id_str:'456',type:'DYNAMIC_TYPE_FORWARD',orig:post});assert.equal(forward.type,'forward');assert.equal(forward.forward.id,'1234567890');
+assert.equal(allowedMedia('https://i0.hdslb.com/bfs/abc.jpg'),true);
+assert.equal(allowedMedia('https://evil.com/abc.png'),false);
+assert.equal(allowedMedia('https://i0.hdslb.com.evil.com/abc.png'),false);
+assert.equal(allowedMedia('http://127.0.0.1/'),false);
+assert.equal(cleanUrl('javascript:alert(1)'), '');
+console.log('所有归一化与媒体 URL 安全测试通过');

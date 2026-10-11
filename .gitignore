@@ -1,0 +1,5 @@
+/archive-data/
+/demo-data/media/
+/demo-data/media-index.json
+.DS_Store
+node_modules/
