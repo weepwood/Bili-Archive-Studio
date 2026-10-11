@@ -176,7 +176,7 @@ async function handler(req,res){
   }
   if(uri.pathname==='/api/health')return json(res,{...health,sourceCount});
   const name=uri.pathname==='/'?'index.html':decodeURIComponent(uri.pathname.slice(1));
-  if(!['index.html','app.css','app.js'].includes(name))return json(res,{error:'not found'},404);
+  if(!['index.html','app.css','app.js','studio.js','studio.css'].includes(name))return json(res,{error:'not found'},404);
   return serveFile(res,path.join(WWW,name));
 }
 async function main(){

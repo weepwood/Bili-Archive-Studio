@@ -1,0 +1,1 @@
+{"manifest_version":3,"name":"Bili Archive Studio 采集助手","version":"0.2.0","description":"在已登录的哔哩哔哩页面一键打开归档面板，无需 F12。数据只保存至用户选择的本地目录。","permissions":["activeTab","scripting"],"host_permissions":["https://*.bilibili.com/*"],"action":{"default_title":"打开动态归档采集器"},"background":{"service_worker":"background.js"}}
